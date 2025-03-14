@@ -122,37 +122,28 @@ if 'chat_history' not in st.session_state:
     ]
 if 'gemini_history' not in st.session_state:
     st.session_state.gemini_history = []
-if 'user_input_submitted' not in st.session_state:
-    st.session_state.user_input_submitted = ""
 
-# Main application logic (outside of callbacks)
-if st.session_state.user_input_submitted:
-    user_message = st.session_state.user_input_submitted
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": user_message})
-    
-    # Format history for Gemini
-    formatted_history = st.session_state.gemini_history.copy()
-    
-    # Get response from Gemini
-    with st.spinner("Thinking..."):
-        response = get_gemini_response(user_message, formatted_history)
-    
-    # Update Gemini history
-    st.session_state.gemini_history.append({"role": "user", "parts": [user_message]})
-    st.session_state.gemini_history.append({"role": "model", "parts": [response]})
-    
-    # Add assistant response to chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": response})
-    
-    # Clear submitted input
-    st.session_state.user_input_submitted = ""
-
-# Function to handle the form submission
-def handle_input():
-    if st.session_state.user_input and st.session_state.user_input.strip():
-        st.session_state.user_input_submitted = st.session_state.user_input
-        st.session_state.user_input = ""
+# Function to handle form submission
+def handle_form_submit():
+    if st.session_state.message_input and st.session_state.message_input.strip():
+        user_message = st.session_state.message_input
+        
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": user_message})
+        
+        # Format history for Gemini
+        formatted_history = st.session_state.gemini_history.copy()
+        
+        # Get response from Gemini
+        with st.spinner("Thinking..."):
+            response = get_gemini_response(user_message, formatted_history)
+        
+        # Update Gemini history
+        st.session_state.gemini_history.append({"role": "user", "parts": [user_message]})
+        st.session_state.gemini_history.append({"role": "model", "parts": [response]})
+        
+        # Add assistant response to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 # Function to clear the conversation
 def clear_conversation():
@@ -160,8 +151,6 @@ def clear_conversation():
         {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
     ]
     st.session_state.gemini_history = []
-    st.session_state.user_input = ""
-    st.session_state.user_input_submitted = ""
 
 # Display chat messages
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
@@ -174,20 +163,17 @@ for message in st.session_state.chat_history:
         st.markdown(f"<div class='bot-message'>{content}</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Chat input using a form to handle submission properly
+# Chat input using a form with a different key for the input field
 with st.form(key="message_form", clear_on_submit=True):
     col1, col2 = st.columns([6, 1])
     with col1:
-        st.text_input(
+        user_input = st.text_input(
             "Type your message:", 
-            key="user_input", 
+            key="message_input", 
             placeholder="Ask me anything..."
         )
     with col2:
-        submit_button = st.form_submit_button("Send", use_container_width=True)
-        
-    if submit_button:
-        handle_input()
+        submit_button = st.form_submit_button("Send", use_container_width=True, on_click=handle_form_submit)
 
 # Sidebar with options
 with st.sidebar:
