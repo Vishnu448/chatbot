@@ -108,24 +108,24 @@ if 'gemini_history' not in st.session_state:
 if 'should_clear_input' not in st.session_state:
     st.session_state.should_clear_input = False
 
-# Function to process user input
+# Function to handle processing the user input and getting a response
 def process_input():
-    user_input = st.session_state.user_input
-    if user_input:
+    user_message = st.session_state.user_input
+    
+    # Only process if there's actual input
+    if user_message and user_message.strip():
         # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        st.session_state.chat_history.append({"role": "user", "content": user_message})
         
         # Format history for Gemini
-        formatted_history = []
-        for msg in st.session_state.gemini_history:
-            formatted_history.append(msg)
-            
+        formatted_history = st.session_state.gemini_history.copy()
+        
         # Get response from Gemini
         with st.spinner("Thinking..."):
-            response = get_gemini_response(user_input, formatted_history)
+            response = get_gemini_response(user_message, formatted_history)
         
         # Update Gemini history
-        st.session_state.gemini_history.append({"role": "user", "parts": [user_input]})
+        st.session_state.gemini_history.append({"role": "user", "parts": [user_message]})
         st.session_state.gemini_history.append({"role": "model", "parts": [response]})
         
         # Add assistant response to chat history
@@ -133,7 +133,13 @@ def process_input():
         
         # Set flag to clear input on next run
         st.session_state.should_clear_input = True
+        
+        # Force a rerun to update the interface
         st.rerun()
+
+# Function to handle the Send button click
+def send_message():
+    process_input()
 
 # Function to clear the conversation
 def clear_conversation():
@@ -144,7 +150,7 @@ def clear_conversation():
     st.session_state.should_clear_input = True
     st.rerun()
 
-# Handle input clearing
+# Handle input clearing at the beginning of the script
 if st.session_state.should_clear_input:
     st.session_state.user_input = ""
     st.session_state.should_clear_input = False
@@ -164,14 +170,21 @@ st.markdown("</div>", unsafe_allow_html=True)
 with st.container():
     col1, col2 = st.columns([6, 1])
     with col1:
-        # Use session_state to manage the input field value
-        user_input = st.text_input(
+        # Text input for user message
+        st.text_input(
             "Type your message:", 
             key="user_input", 
-            placeholder="Ask me anything..."
+            placeholder="Ask me anything...",
+            on_change=process_input,  # This will process when user presses Enter
         )
     with col2:
-        send_button = st.button("Send", key="send", use_container_width=True, on_click=process_input)
+        # Send button
+        if st.button("Send", key="send", use_container_width=True):
+            send_message()
+
+# Handle "Enter" key for submission
+if st.session_state.user_input and st.session_state.user_input[-1:] == '\n':
+    process_input()
 
 # Sidebar with options
 with st.sidebar:
