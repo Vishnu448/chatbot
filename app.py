@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+import time
 
 # Configure page
 st.set_page_config(page_title="Kishore Chatbot", page_icon="💬", layout="wide")
@@ -29,12 +30,28 @@ def get_gemini_response(prompt, chat_history=[]):
         # Add system prompt if this is a new conversation
         if not chat_history:
             chat.send_message(system_prompt)
-            
-        response = chat.send_message(prompt)
-        return response.text
+        
+        # Implement retry logic with backoff for rate limiting
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = chat.send_message(prompt)
+                return response.text
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    # Wait with exponential backoff
+                    wait_time = (2 ** attempt) * 2
+                    time.sleep(wait_time)
+                else:
+                    # Re-raise if it's not a rate limit or we've exhausted retries
+                    raise
+                    
     except Exception as e:
-        st.error(f"Error getting response: {e}")
-        return "I'm having trouble processing your request right now. Please try again."
+        error_msg = str(e)
+        if "429" in error_msg:
+            return "I've reached my usage limit. Please try again later or check your API quota."
+        else:
+            return f"I'm having trouble processing your request right now. Error: {error_msg}"
 
 # Add custom styling
 st.markdown("""
@@ -105,41 +122,37 @@ if 'chat_history' not in st.session_state:
     ]
 if 'gemini_history' not in st.session_state:
     st.session_state.gemini_history = []
-if 'should_clear_input' not in st.session_state:
-    st.session_state.should_clear_input = False
+if 'user_input_submitted' not in st.session_state:
+    st.session_state.user_input_submitted = ""
 
-# Function to handle processing the user input and getting a response
-def process_input():
-    user_message = st.session_state.user_input
+# Main application logic (outside of callbacks)
+if st.session_state.user_input_submitted:
+    user_message = st.session_state.user_input_submitted
+    # Add user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": user_message})
     
-    # Only process if there's actual input
-    if user_message and user_message.strip():
-        # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": user_message})
-        
-        # Format history for Gemini
-        formatted_history = st.session_state.gemini_history.copy()
-        
-        # Get response from Gemini
-        with st.spinner("Thinking..."):
-            response = get_gemini_response(user_message, formatted_history)
-        
-        # Update Gemini history
-        st.session_state.gemini_history.append({"role": "user", "parts": [user_message]})
-        st.session_state.gemini_history.append({"role": "model", "parts": [response]})
-        
-        # Add assistant response to chat history
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
-        
-        # Set flag to clear input on next run
-        st.session_state.should_clear_input = True
-        
-        # Force a rerun to update the interface
-        st.rerun()
+    # Format history for Gemini
+    formatted_history = st.session_state.gemini_history.copy()
+    
+    # Get response from Gemini
+    with st.spinner("Thinking..."):
+        response = get_gemini_response(user_message, formatted_history)
+    
+    # Update Gemini history
+    st.session_state.gemini_history.append({"role": "user", "parts": [user_message]})
+    st.session_state.gemini_history.append({"role": "model", "parts": [response]})
+    
+    # Add assistant response to chat history
+    st.session_state.chat_history.append({"role": "assistant", "content": response})
+    
+    # Clear submitted input
+    st.session_state.user_input_submitted = ""
 
-# Function to handle the Send button click
-def send_message():
-    process_input()
+# Function to handle the form submission
+def handle_input():
+    if st.session_state.user_input and st.session_state.user_input.strip():
+        st.session_state.user_input_submitted = st.session_state.user_input
+        st.session_state.user_input = ""
 
 # Function to clear the conversation
 def clear_conversation():
@@ -147,13 +160,8 @@ def clear_conversation():
         {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
     ]
     st.session_state.gemini_history = []
-    st.session_state.should_clear_input = True
-    st.rerun()
-
-# Handle input clearing at the beginning of the script
-if st.session_state.should_clear_input:
     st.session_state.user_input = ""
-    st.session_state.should_clear_input = False
+    st.session_state.user_input_submitted = ""
 
 # Display chat messages
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
@@ -166,25 +174,20 @@ for message in st.session_state.chat_history:
         st.markdown(f"<div class='bot-message'>{content}</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Chat input
-with st.container():
+# Chat input using a form to handle submission properly
+with st.form(key="message_form", clear_on_submit=True):
     col1, col2 = st.columns([6, 1])
     with col1:
-        # Text input for user message
         st.text_input(
             "Type your message:", 
             key="user_input", 
-            placeholder="Ask me anything...",
-            on_change=process_input,  # This will process when user presses Enter
+            placeholder="Ask me anything..."
         )
     with col2:
-        # Send button
-        if st.button("Send", key="send", use_container_width=True):
-            send_message()
-
-# Handle "Enter" key for submission
-if st.session_state.user_input and st.session_state.user_input[-1:] == '\n':
-    process_input()
+        submit_button = st.form_submit_button("Send", use_container_width=True)
+        
+    if submit_button:
+        handle_input()
 
 # Sidebar with options
 with st.sidebar:
