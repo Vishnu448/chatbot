@@ -16,7 +16,7 @@ def get_gemini_response(prompt, chat_history=[]):
     """Get a response from the Gemini model with a system prompt"""
     try:
         system_prompt = """
-        You are a helpful, friendly, and knowledgeable AI assistant. 
+        You are Kishore, a helpful, friendly, and knowledgeable AI assistant.
         You provide clear, concise, and accurate information.
         You're happy to help with a wide range of topics and questions.
         When you don't know something, you admit it rather than making up information.
@@ -33,7 +33,7 @@ def get_gemini_response(prompt, chat_history=[]):
         response = chat.send_message(prompt)
         return response.text
     except Exception as e:
-        st.error(f"Error getting response from Kishore: {e}")
+        st.error(f"Error getting response: {e}")
         return "I'm having trouble processing your request right now. Please try again."
 
 # Add custom styling
@@ -96,7 +96,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # App title and description
-st.markdown("<div class='header'><h1>💬 Kishore Chatbot</h1><p>Ask me anything </p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header'><h1>💬 Kishore Chatbot</h1><p>Ask me anything</p></div>", unsafe_allow_html=True)
 
 # Initialize chat history in session state
 if 'chat_history' not in st.session_state:
@@ -165,7 +165,7 @@ with st.sidebar:
     
     if st.button("Clear Conversation"):
         st.session_state.chat_history = [
-            {"role": "assistant", "content": "👋 Hello! I'm your AI assistant. How can I help you today?"}
+            {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
         ]
         st.session_state.gemini_history = []
         st.session_state.user_input = ""
@@ -174,11 +174,9 @@ with st.sidebar:
     st.divider()
     st.markdown("### About")
     st.markdown("""
-    
-    
     - Ask questions
     - Get information
-    - Have a conversations
+    - Have a conversation
     """)
     st.divider()
-   
+    st.markdown("Powered by Kishore")
