@@ -3,7 +3,7 @@ import google.generativeai as genai
 import os
 
 # Configure page
-st.set_page_config(page_title="Gemini Chatbot", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Kishore Chatbot", page_icon="💬", layout="wide")
 
 # Set up your API key
 GOOGLE_API_KEY = "AIzaSyA7OQchjmlL2msZZuy5ue3hMH8wx3GdBHw"
@@ -33,7 +33,7 @@ def get_gemini_response(prompt, chat_history=[]):
         response = chat.send_message(prompt)
         return response.text
     except Exception as e:
-        st.error(f"Error getting response from Gemini: {e}")
+        st.error(f"Error getting response from Kishore: {e}")
         return "I'm having trouble processing your request right now. Please try again."
 
 # Add custom styling
@@ -96,15 +96,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # App title and description
-st.markdown("<div class='header'><h1>💬 Gemini Chatbot</h1><p>Ask me anything - powered by Google's Gemini AI</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header'><h1>💬 Kishore Chatbot</h1><p>Ask me anything </p></div>", unsafe_allow_html=True)
 
 # Initialize chat history in session state
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "👋 Hello! I'm your AI assistant powered by Google's Gemini. How can I help you today?"}
+        {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
     ]
 if 'gemini_history' not in st.session_state:
     st.session_state.gemini_history = []
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+
+# Function to process user input
+def process_input():
+    user_input = st.session_state.user_input
+    if user_input:
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        
+        # Format history for Gemini
+        formatted_history = []
+        for msg in st.session_state.gemini_history:
+            formatted_history.append(msg)
+            
+        # Get response from Gemini
+        with st.spinner("Thinking..."):
+            response = get_gemini_response(user_input, formatted_history)
+        
+        # Update Gemini history
+        st.session_state.gemini_history.append({"role": "user", "parts": [user_input]})
+        st.session_state.gemini_history.append({"role": "model", "parts": [response]})
+        
+        # Add assistant response to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        
+        # Clear input field
+        st.session_state.user_input = ""
 
 # Display chat messages
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
@@ -121,33 +149,15 @@ st.markdown("</div>", unsafe_allow_html=True)
 with st.container():
     col1, col2 = st.columns([6, 1])
     with col1:
-        user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me anything...")
+        # Use session_state to manage the input field value
+        user_input = st.text_input(
+            "Type your message:", 
+            key="user_input", 
+            placeholder="Ask me anything...",
+            on_change=process_input
+        )
     with col2:
-        send_button = st.button("Send", key="send", use_container_width=True)
-
-# Process user input when Send is clicked
-if send_button and user_input:
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": user_input})
-    
-    # Format history for Gemini
-    formatted_history = []
-    for msg in st.session_state.gemini_history:
-        formatted_history.append(msg)
-        
-    # Get response from Gemini
-    with st.spinner("Thinking..."):
-        response = get_gemini_response(user_input, formatted_history)
-    
-    # Update Gemini history
-    st.session_state.gemini_history.append({"role": "user", "parts": [user_input]})
-    st.session_state.gemini_history.append({"role": "model", "parts": [response]})
-    
-    # Add assistant response to chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": response})
-    
-    # Clear input
-    st.experimental_rerun()
+        send_button = st.button("Send", key="send", use_container_width=True, on_click=process_input)
 
 # Sidebar with options
 with st.sidebar:
@@ -155,19 +165,20 @@ with st.sidebar:
     
     if st.button("Clear Conversation"):
         st.session_state.chat_history = [
-            {"role": "assistant", "content": "👋 Hello! I'm your AI assistant powered by Google's Gemini. How can I help you today?"}
+            {"role": "assistant", "content": "👋 Hello! I'm your AI assistant. How can I help you today?"}
         ]
         st.session_state.gemini_history = []
+        st.session_state.user_input = ""
         st.rerun()
     
     st.divider()
     st.markdown("### About")
     st.markdown("""
-    This chatbot uses Google's Gemini 1.5 Pro model to provide conversational AI capabilities.
+    
     
     - Ask questions
     - Get information
     - Have a conversations
     """)
     st.divider()
-    st.markdown("Powered by Gemini 1.5 Pro")
+   
