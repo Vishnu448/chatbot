@@ -105,8 +105,8 @@ if 'chat_history' not in st.session_state:
     ]
 if 'gemini_history' not in st.session_state:
     st.session_state.gemini_history = []
-if 'user_input' not in st.session_state:
-    st.session_state.user_input = ""
+if 'should_clear_input' not in st.session_state:
+    st.session_state.should_clear_input = False
 
 # Function to process user input
 def process_input():
@@ -131,8 +131,23 @@ def process_input():
         # Add assistant response to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": response})
         
-        # Clear input field
-        st.session_state.user_input = ""
+        # Set flag to clear input on next run
+        st.session_state.should_clear_input = True
+        st.rerun()
+
+# Function to clear the conversation
+def clear_conversation():
+    st.session_state.chat_history = [
+        {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
+    ]
+    st.session_state.gemini_history = []
+    st.session_state.should_clear_input = True
+    st.rerun()
+
+# Handle input clearing
+if st.session_state.should_clear_input:
+    st.session_state.user_input = ""
+    st.session_state.should_clear_input = False
 
 # Display chat messages
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
@@ -153,8 +168,7 @@ with st.container():
         user_input = st.text_input(
             "Type your message:", 
             key="user_input", 
-            placeholder="Ask me anything...",
-            on_change=process_input
+            placeholder="Ask me anything..."
         )
     with col2:
         send_button = st.button("Send", key="send", use_container_width=True, on_click=process_input)
@@ -164,12 +178,7 @@ with st.sidebar:
     st.header("Options")
     
     if st.button("Clear Conversation"):
-        st.session_state.chat_history = [
-            {"role": "assistant", "content": "👋 Hello! I'm Kishore. How can I help you today?"}
-        ]
-        st.session_state.gemini_history = []
-        st.session_state.user_input = ""
-        st.rerun()
+        clear_conversation()
     
     st.divider()
     st.markdown("### About")
