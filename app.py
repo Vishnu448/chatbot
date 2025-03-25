@@ -191,3 +191,7 @@ with st.sidebar:
     """)
     st.divider()
     st.markdown("Powered by Kishore")
+    
+    st.divider()
+    st.markdown("### API Key")
+    st.write("To use this app, you'll need to obtain an API key from Google. Please contact the developer for more information.")
